@@ -1,49 +1,46 @@
 # Solution Architecture
 
-## 1. Architecture Overview
+## Overview
+SAP Integration Suite acts as middleware between SuccessFactors and a FastAPI application backed by PostgreSQL.
 
-The solution uses SAP Integration Suite as middleware between SAP SuccessFactors and an external FastAPI application.
+```mermaid
+flowchart TD
+ A[Postman] -->|HTTPS employeeId| B[HTTPS Sender]
+ B --> C[ExtractEmployeeID]
+ C --> D[SuccessFactors OData V2 Request-Reply]
+ D --> E[Router]
+ E -->|Found| F[Prepare Employee Data]
+ F --> G[RetrieveFastAPIKey]
+ G --> H[HTTP POST to FastAPI]
+ H --> I[PostgreSQL]
+ E -->|Not found| J[Not-found response]
+```
 
-Postman is used as the client to invoke the CPI HTTPS endpoint.
-
-## 2. High-Level Data Flow
-
-1. Postman sends an HTTPS GET request with an employeeId query parameter.
-2. CPI receives the request through the HTTPS Sender Adapter.
-3. A Groovy script extracts the employee ID from the incoming HTTP query.
-4. A Router checks whether the employee ID is missing.
-5. If missing, the flow returns an input validation response.
-6. If present, CPI calls SuccessFactors using the OData V2 receiver adapter.
-7. A second Router determines whether the employee record was found.
-8. If no record is found, CPI returns a NOT_FOUND response.
-9. If found, a Content Modifier extracts the required employee fields and prepares a JSON payload.
-10. A Groovy script retrieves the FastAPI API key from SAP BTP Security Material.
-11. CPI sends the JSON payload to FastAPI using HTTP POST.
-12. FastAPI processes the request and persists the employee record in PostgreSQL.
-
-## 3. Data Mapping
-
-| SuccessFactors field | Target JSON field |
+## Component responsibilities
+| Component | Responsibility |
 |---|---|
-| personIdExternal | person_id_external |
-| personalInfoNav/firstName | first_name |
-| personalInfoNav/lastName | last_name |
-| employmentNav/userId | user_id |
-| employmentNav/startDate | start_date |
-| employmentNav/endDate | end_date |
+| HTTPS Sender | Accepts the inbound request |
+| `ExtractEmployeeID` | Extracts the query parameter and makes it available to later steps |
+| SuccessFactors receiver | Executes the OData V2 lookup |
+| Request-Reply | Waits for the SuccessFactors response |
+| Router | Selects found or not-found processing |
+| `Prepare Employee Data` | Extracts fields and creates the target JSON body |
+| `RetrieveFastAPIKey` | Retrieves the secure parameter and sets the outbound API-key header |
+| HTTP receiver | Sends the JSON payload to FastAPI |
+| FastAPI | Validates and persists the employee |
+| PostgreSQL | Stores the employee record |
 
-The SuccessFactors response is XML. CPI extracts the required values and constructs the JSON payload expected by FastAPI.
+## Source query
+The query uses the `PerPerson` entity and expands `personalInfoNav` and `employmentNav`. It selects `personIdExternal`, first and last name, user ID, start date and end date. `userId` is obtained through `employmentNav/userId`.
 
-## 4. Security
+## Transformation
+CPI converts the SuccessFactors XML response into a JSON object using target field names. Date values are normalized for the target contract; an absent end date is represented as `null`.
 
-The FastAPI API key is stored as a Secure Parameter in SAP BTP Security Material.
+## Security
+The FastAPI key is stored in CPI Security Material as a Secure Parameter. The iFlow references the alias and retrieves the secret at runtime; the secret must not be embedded in source code or committed to GitHub. Do not publish traces or screenshots containing authentication headers.
 
-The integration flow retrieves the parameter at runtime and uses it in the outbound HTTP request header.
+## Error handling
+The router sends records with no matching employee to a not-found response path, which does not continue to the FastAPI persistence call. Missing input is handled as a validation scenario. Connectivity, authentication and target API failures require inspection of CPI monitoring and application logs.
 
-The actual API key is intentionally excluded from this repository.
-
-## 5. Integration Pattern
-
-The project demonstrates a synchronous inbound HTTPS request followed by an outbound SuccessFactors request and an HTTP POST to the target application.
-
-The integration is orchestrated through SAP Cloud Integration.
+## Production considerations
+A production design would additionally require enterprise identity controls, least-privilege access, retry and timeout strategy, idempotency, monitoring and alerting, privacy controls, transport governance and operational ownership.
