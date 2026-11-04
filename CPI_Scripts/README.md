@@ -1,41 +1,22 @@
-package script
+# CPI Groovy Scripts
 
-import com.sap.gateway.ip.core.customdev.util.Message
-import java.net.URLDecoder
+This folder contains the Groovy scripts used in the SAP Integration Suite integration flow.
 
-def Message processData(Message message) {
+## 1. ExtractEmployeeID.groovy
 
-    def headers = message.getHeaders()
-    def query = headers.get("CamelHttpQuery")
+Purpose:
+- Reads the incoming HTTP query string.
+- Extracts the employeeId parameter.
+- Stores the value in the EmployeeID exchange property.
+- Sets InputValidationError based on whether the parameter is available.
 
-    String employeeId = null
+## 2. RetrieveFastAPIKey.groovy
 
-    if (query != null && !query.trim().isEmpty()) {
+Purpose:
+- Reads the secure parameter alias from the exchange property ApiKeyAlias.
+- Retrieves the API key from SAP BTP Security Material.
+- Sets the X-API-Key header for the FastAPI receiver request.
 
-        def params = query.split("&").collectEntries { param ->
-            def parts = param.split("=", 2)
+## Security
 
-            [
-                URLDecoder.decode(parts[0], "UTF-8"),
-                parts.length > 1
-                    ? URLDecoder.decode(parts[1], "UTF-8")
-                    : ""
-            ]
-        }
-
-        employeeId = params.get("employeeId")
-    }
-
-    if (employeeId == null || employeeId.trim().isEmpty()) {
-
-        message.setProperty("InputValidationError", "true")
-        message.setProperty("EmployeeID", "")
-
-    } else {
-
-        message.setProperty("InputValidationError", "false")
-        message.setProperty("EmployeeID", employeeId.trim())
-    }
-
-    return message
-}
+Actual API keys, passwords and credentials must never be stored in these source files.
