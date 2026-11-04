@@ -1,71 +1,39 @@
-# CPI Integration Flow
+# Integration Flow
 
-## Integration Flow Name
+## 1. Inbound request
+The iFlow exposes an HTTPS endpoint. The caller supplies an employee ID as a query parameter.
 
-Employee Master Data Integration
+```http
+GET /http/employee/masterdata?employeeId=EMPLOYEE_1001
+```
 
-## Integration Flow ID
+The runtime host is environment-specific and is intentionally not published here.
 
-SF_EMPLOYEE_MASTER_DATA_IFLOW
+## 2. Extract employee ID
+`ExtractEmployeeID` reads the incoming `employeeId` parameter and stores it in the `EmployeeID` exchange property for subsequent processing. This makes the request dynamic.
 
-## Processing Steps
+## 3. SuccessFactors lookup
+CPI calls the SuccessFactors OData V2 `PerPerson` entity and expands the personal and employment navigation properties needed for the mapping. The query is scoped to the requested employee ID.
 
-### Step 1 – HTTPS Sender
+## 4. Conditional routing
+After the source response is received, the router selects one of two paths.
 
-Receives the incoming request from Postman.
+### Employee found
+1. Extract the required source fields.
+2. Construct the normalized JSON body.
+3. Retrieve the FastAPI key from CPI Security Material.
+4. Set the `X-API-Key` request header.
+5. Send an HTTP POST request to FastAPI.
 
-Example request pattern:
+### Employee not found
+1. Create a structured not-found response.
+2. End the not-found path without calling FastAPI.
 
-GET /http/employee/masterdata?employeeId=<EMPLOYEE_ID>
+## 5. Target request
+The FastAPI request contains `Content-Type: application/json`, an `X-API-Key` header retrieved at runtime, and the normalized employee JSON body. The secret value is not documented here.
 
-### Step 2 – Content Modifier 1
+## 6. Persistence
+FastAPI validates the request and writes the employee attributes to PostgreSQL table `public.employees`. The application implementation determines the exact create/update behavior.
 
-Prepares initial message properties and headers as required by the flow.
-
-### Step 3 – ExtractEmployeeID
-
-A Groovy script reads the CamelHttpQuery header, extracts the employeeId parameter, and stores it in the EmployeeID exchange property.
-
-It also sets InputValidationError to true or false.
-
-### Step 4 – Router 2: Input Validation
-
-Checks whether an employee ID was provided.
-
-- Missing ID: routes to the validation response.
-- Valid input: continues to the SuccessFactors request.
-
-### Step 5 – Request Reply 1
-
-Calls the SuccessFactors OData V2 service and waits for the response.
-
-### Step 6 – Router 1: Employee Found
-
-Checks the SuccessFactors response.
-
-- Employee found: continues to data preparation.
-- Employee not found: returns a NOT_FOUND response.
-
-### Step 7 – Prepare Employee Data
-
-Uses a Content Modifier to extract employee fields from the XML response and prepare the JSON body required by FastAPI.
-
-### Step 8 – RetrieveFastAPIKey
-
-A Groovy script retrieves the Secure Parameter named FASTAPI_API_KEY from SAP BTP Security Material and sets the X-API-Key request header.
-
-The actual secret is not stored in the script.
-
-### Step 9 – Send Employee to FastAPI
-
-The HTTP Receiver Adapter sends the JSON payload to the FastAPI employee endpoint using POST.
-
-### Step 10 – Database Persistence
-
-FastAPI validates and processes the request, then creates or updates the employee record in PostgreSQL.
-
-## Error and Validation Scenarios
-
-- Missing employee ID is handled before the SuccessFactors call.
-- Unknown employee ID is handled through employee-not-found routing.
-- Errors from external services can be investigated using CPI monitoring and message processing logs.
+## 7. Troubleshooting checkpoints
+Inspect the inbound employee ID, SuccessFactors response, router branch, prepared JSON body, target HTTP response and resulting database row. Never publish credentials, tokens, API keys or real employee data in logs or screenshots.
