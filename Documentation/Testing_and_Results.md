@@ -1,22 +1,35 @@
 # Testing and Results
 
-The following scenarios were tested in the learning environment.
+## 1. Testing Objective
 
-| Scenario | Expected behaviour | Result |
-|---|---|---|
-| Valid employee ID | Retrieve source data, call FastAPI, persist record | Passed |
-| Different valid IDs | Use the supplied ID dynamically | Passed |
-| Invalid employee ID | Return employee-not-found response | Passed |
-| Missing employee ID | Return input-validation response | Passed |
-| Database verification | Confirm rows in PostgreSQL | Passed |
+To verify dynamic employee ID processing, SuccessFactors data retrieval, conditional routing, JSON transformation, FastAPI communication and PostgreSQL persistence.
 
-## Database verification
+## 2. Test Cases
+
+| Test Case | Input | Expected Result | Observed Result |
+|---|---|---|---|
+| Valid employee | Existing employee ID | Employee data retrieved and processed | Successful |
+| Different valid employee | Another existing employee ID | Corresponding employee data processed | Successful |
+| Invalid employee | Non-existing employee ID | NOT_FOUND response | Successful |
+| Missing employee ID | Parameter omitted | Input validation response | Successful |
+| Dynamic input | Employee ID changed between requests | Flow processes the supplied ID | Successful |
+
+## 3. Database Verification
+
+The PostgreSQL table used for verification is:
+
+public.employees
+
+The following query was used:
 
 ```sql
-SELECT id, person_id_external, first_name, last_name,
-       user_id, start_date, end_date
+SELECT
+    id,
+    person_id_external,
+    first_name,
+    last_name,
+    user_id,
+    start_date,
+    end_date
 FROM public.employees
-ORDER BY id;
-```
-
-Add sanitized screenshots showing the iFlow, Postman test results, and database verification. Review screenshots for credentials, API keys, tenant identifiers, employee personal data, and confidential information before publishing.
+ORDER BY id ASC;
