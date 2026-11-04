@@ -1,9 +1,3 @@
-
-## 6. `Documentation/Interview_Preparation.md`
-
-This file will help you explain the project in interviews.
-
-```markdown
 # Interview Preparation – SAP SuccessFactors Employee Integration
 
 ## 1. Explain your project in two minutes.
