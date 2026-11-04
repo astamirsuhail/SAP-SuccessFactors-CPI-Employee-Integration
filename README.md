@@ -1,121 +1,90 @@
 # SAP SuccessFactors Employee Master Data Integration
 
-An end-to-end integration project built using **SAP Integration Suite (Cloud Integration / CPI)**, SAP SuccessFactors OData V2, FastAPI, and PostgreSQL.
+An end-to-end portfolio integration using **SAP Integration Suite (Cloud Integration/CPI)**, **SAP SuccessFactors OData V2**, **FastAPI**, and **PostgreSQL**.
 
-The project demonstrates how employee master data can be retrieved from SAP SuccessFactors, transformed, and synchronized with an external application through a secured REST API.
+## Business scenario
+A consumer supplies an employee ID to a CPI HTTPS endpoint. CPI retrieves the employee from SuccessFactors, transforms the source XML into a normalized JSON payload, and sends it to FastAPI. FastAPI persists the record in PostgreSQL.
 
-## Project Architecture
+## Architecture
+```mermaid
+flowchart LR
+ A[Postman / API Client] -->|HTTPS + employeeId| B[SAP Integration Suite]
+ B --> C[Extract and validate ID]
+ C --> D[SuccessFactors OData V2]
+ D --> E{Employee found?}
+ E -->|Yes| F[XML to JSON mapping]
+ F --> G[Retrieve API key from CPI Security Material]
+ G --> H[FastAPI REST API]
+ H --> I[PostgreSQL]
+ E -->|No| J[Not-found response]
+```
 
-```text
-Postman
-   |
-   | HTTPS GET + employeeId
-   v
-SAP Integration Suite (CPI)
-   |
-   |-- Extract and validate Employee ID
-   |
-   |-- Router: Missing Employee ID?
-   |       |
-   |       +-- Yes --> Return validation response
-   |       |
-   |       +-- No
-   |            |
-   |            v
-   |       SuccessFactors OData V2
-   |            |
-   |            v
-   |       Router: Employee Found?
-   |            |
-   |            +-- No --> Return NOT_FOUND response
-   |            |
-   |            +-- Yes
-   |                 |
-   |                 v
-   |          Extract employee fields
-   |                 |
-   |                 v
-   |          Transform XML to JSON
-   |                 |
-   |                 v
-   |          Retrieve API key from
-   |          SAP BTP Security Material
-   |                 |
-   |                 v
-   |          HTTP POST to FastAPI
-   |                 |
-   |                 v
-   |          PostgreSQL Database
+## Technology stack
+| Layer | Technology | Responsibility |
+|---|---|---|
+| API client | Postman | Sends test requests |
+| Integration | SAP Integration Suite | Orchestrates retrieval, routing, transformation and delivery |
+| Source | SAP SuccessFactors OData V2 | Employee master data |
+| Target API | FastAPI | Validates and persists employee data |
+| Database | PostgreSQL | Stores employee records |
+| Database client | pgAdmin | Verifies persistence |
 
-Technology Stack
-Technology	Purpose
-SAP Integration Suite	Integration orchestration
-SAP SuccessFactors	Employee master data source
-OData V2	Employee data retrieval
-Groovy	Dynamic input extraction and secure parameter retrieval
-Content Modifier	Properties, headers and JSON payload preparation
-Router	Conditional message routing
-HTTPS Adapter	Inbound API endpoint
-HTTP Adapter	Outbound FastAPI communication
-FastAPI	REST API application
-PostgreSQL	Employee data persistence
-Postman	API testing
-
-Key Features
-- Dynamic employee ID passed through an HTTPS query parameter.
-- Validation for missing employee IDs.
-- Employee data retrieval using SuccessFactors OData V2.
+## Key capabilities
+- HTTPS inbound request with a dynamic `employeeId` query parameter.
+- SuccessFactors OData V2 lookup using expanded personal and employment navigation properties.
+- XML response processing and JSON transformation.
 - Employee-found and employee-not-found routing.
-- XML-to-JSON transformation.
-- Secure API key retrieval using SAP BTP Security Material.
-- HTTP POST integration with FastAPI.
-- PostgreSQL data persistence.
-- Testing of valid, invalid and missing employee ID scenarios.
-Testing Scenarios
-Test	Input	Expected result
-Valid employee	Existing employee ID	Employee data retrieved and sent to FastAPI
-Invalid employee	Non-existing employee ID	NOT_FOUND response
-Missing employee ID	No query parameter	Input validation response
-Dynamic employee ID	Different valid IDs	Corresponding employee data processed
+- FastAPI API-key authentication using a secure parameter stored in CPI Security Material.
+- PostgreSQL persistence.
+- Tests for valid, invalid, missing and different employee IDs.
 
-The integration was tested using Postman. Successful employee records were verified in PostgreSQL.
-Repository Structure
-SAP-SuccessFactors-CPI-Employee-Integration/
-│
-├── README.md
-├── .gitignore
-│
-├── Documentation/
-│   ├── Project_Overview.md
-│   ├── Architecture.md
-│   ├── Integration_Flow.md
-│   ├── Testing_and_Results.md
-│   └── Interview_Preparation.md
-│
+## Data mapping
+| SuccessFactors field | Target JSON field |
+|---|---|
+| `personIdExternal` | `person_id_external` |
+| `personalInfoNav/firstName` | `first_name` |
+| `personalInfoNav/lastName` | `last_name` |
+| `employmentNav/userId` | `user_id` |
+| `employmentNav/startDate` | `start_date` |
+| `employmentNav/endDate` | `end_date` |
+
+Illustrative payload (fictitious data):
+```json
+{
+  "person_id_external": "EMPLOYEE_1001",
+  "first_name": "Alex",
+  "last_name": "Morgan",
+  "user_id": "EMPLOYEE_1001",
+  "start_date": "2025-01-15",
+  "end_date": null
+}
+```
+
+## Repository structure
+```text
+.
 ├── CPI_Scripts/
-│   ├── ExtractEmployeeID.groovy
-│   ├── RetrieveFastAPIKey.groovy
-│   └── README.md
-│
-├── FastAPI_Application/
-│   └── README.md
-│
 ├── Database/
-│   └── README.md
-│
-└── Screenshots/
-    └── README.md
+├── Documentation/
+├── FastAPI_Application/
+├── Screenshots/
+└── README.md
+```
 
-Security Considerations
-- API keys are stored in SAP BTP Security Material, not hardcoded in the integration flow.
-- Credentials, tokens and .env files must not be committed.
-- Screenshots and sample payloads should be sanitized before publication.
-- Demo employee information should not expose personal or confidential data.
-Project Scope and Limitations
-This is a hands-on portfolio project using a SuccessFactors demonstration environment and a separately hosted FastAPI application.
+## Test summary
+| Scenario | Expected / observed behavior |
+|---|---|
+| Valid employee ID | Employee retrieved, sent to FastAPI and verified in PostgreSQL |
+| Invalid employee ID | CPI returns the configured not-found response |
+| Missing employee ID | Input-validation scenario handled by the flow |
+| Dynamic employee ID | Same iFlow processes different supplied IDs |
 
-It demonstrates the integration flow and database synchronization. It is not a production deployment and does not claim to represent a live enterprise SuccessFactors implementation.
-Author
-Aamir Suhail
+See [Testing and Results](Documentation/Testing_and_Results.md) for the test summary.
 
-GitHub: astamirsuhail
+## Security and scope
+This repository contains implementation documentation, not tenant exports or credentials. Do not commit API keys, passwords, OAuth secrets, access tokens, live private endpoints, or real employee personal data. Sanitize screenshots before uploading.
+
+This is a learning/portfolio implementation, not a claim of production deployment. Production adoption would require additional controls for identity, monitoring, retries, idempotency, transport governance, privacy and operational support.
+
+## Author
+**Aamir Suhail** — SAP Integration Suite | SuccessFactors Integration | API Integration | Automation
