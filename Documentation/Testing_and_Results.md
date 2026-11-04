@@ -1,35 +1,43 @@
 # Testing and Results
 
-## 1. Testing Objective
+## Test approach
+Postman was used to invoke the CPI HTTPS endpoint. pgAdmin was used to inspect the PostgreSQL table after successful processing.
 
-To verify dynamic employee ID processing, SuccessFactors data retrieval, conditional routing, JSON transformation, FastAPI communication and PostgreSQL persistence.
-
-## 2. Test Cases
-
-| Test Case | Input | Expected Result | Observed Result |
+## Test summary
+| Test ID | Scenario | Input | Reported result |
 |---|---|---|---|
-| Valid employee | Existing employee ID | Employee data retrieved and processed | Successful |
-| Different valid employee | Another existing employee ID | Corresponding employee data processed | Successful |
-| Invalid employee | Non-existing employee ID | NOT_FOUND response | Successful |
-| Missing employee ID | Parameter omitted | Input validation response | Successful |
-| Dynamic input | Employee ID changed between requests | Flow processes the supplied ID | Successful |
+| TC-01 | Valid employee | Employee ID present in SuccessFactors | Successful processing; record verified in PostgreSQL |
+| TC-02 | Invalid employee | Deliberately non-existent employee ID | CPI returned the configured `NOT_FOUND` response |
+| TC-03 | Missing employee ID | Request without the required query parameter | Missing-input scenario tested and handled |
+| TC-04 | Dynamic employee ID | Different valid employee IDs | Same iFlow processed different IDs; resulting records verified in PostgreSQL |
 
-## 3. Database Verification
+## Example not-found response
+```xml
+<EmployeeResponse>
+  <Status>NOT_FOUND</Status>
+  <Message>No employee found for the requested Employee ID.</Message>
+</EmployeeResponse>
+```
 
-The PostgreSQL table used for verification is:
-
-public.employees
-
-The following query was used:
-
+## Database verification query
 ```sql
 SELECT
-    id,
-    person_id_external,
-    first_name,
-    last_name,
-    user_id,
-    start_date,
-    end_date
+    id, person_id_external, first_name, last_name,
+    user_id, start_date, end_date
 FROM public.employees
-ORDER BY id ASC;
+ORDER BY id;
+```
+
+## Recommended evidence
+Add sanitized screenshots to `Screenshots/`:
+1. CPI iFlow overview.
+2. Successful Postman request.
+3. Invalid employee response.
+4. Missing employee ID test.
+5. Request using a different valid employee ID.
+6. pgAdmin database verification.
+
+Mask API keys, authorization headers, OAuth secrets, sensitive tenant URLs, email addresses and real employee personal information. Prefer fictitious test data.
+
+## Result
+The project author reports successful completion of the valid, invalid, missing-input and dynamic employee ID tests, including database verification. These are portfolio tests in a learning/demo environment, not evidence of a production deployment.
