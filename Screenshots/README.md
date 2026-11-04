@@ -1,24 +1,13 @@
 # Project Screenshots
 
-This folder contains visual evidence of the SAP SuccessFactors Employee Master Data Integration project.
+This directory contains selected, sanitized evidence of the implementation and testing.
 
-## Screenshots
+Recommended filenames:
+- `01-iflow-overview.png` — CPI iFlow canvas.
+- `02-valid-request.png` — successful Postman request.
+- `03-invalid-request.png` — employee-not-found response.
+- `04-missing-id.png` — missing employee ID test.
+- `05-dynamic-id.png` — successful request using a different employee ID.
+- `06-database-verification.png` — PostgreSQL table verification.
 
-| Filename | Description |
-|---|---|
-| 01_CPI_Architecture.png | Complete CPI integration flow |
-| 02_SuccessFactors_Adapter.png | SuccessFactors receiver configuration |
-| 03_EmployeeID_Extraction.png | Dynamic employee ID extraction |
-| 04_Routing_Logic.png | Input validation and employee routing |
-| 05_Employee_JSON_Mapping.png | Employee XML-to-JSON mapping |
-| 06_Secure_Parameter.png | SAP BTP Security Material |
-| 07_HTTP_Receiver.png | FastAPI HTTP receiver configuration |
-| 08_Valid_Employee_Test.png | Successful valid employee test |
-| 09_Invalid_Employee_Test.png | Employee not found test |
-| 10_PostgreSQL_Results.png | Database verification |
-
-## Security
-
-All screenshots must be reviewed and sanitized before publication.
-
-Do not expose passwords, API keys, OAuth tokens, private employee information or confidential tenant details.
+Before uploading, redact API keys, authorization headers, tokens, passwords, sensitive tenant URLs, email addresses and real employee personal information. Use fictitious test records in public evidence.
