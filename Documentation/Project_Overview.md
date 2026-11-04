@@ -1,9 +1,3 @@
-
-## 2. `Documentation/Project_Overview.md`
-
-Open `Documentation` → open `Project_Overview.md` → Edit → replace the content.
-
-```markdown
 # Project Overview
 
 ## 1. Project Title
